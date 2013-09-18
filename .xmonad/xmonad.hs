@@ -16,6 +16,8 @@ import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 import XMonad.Util.Run(spawnPipe)
 import XMonad.Util.EZConfig(additionalKeys)
+import XMonad.Layout.NoBorders
+import XMonad.Layout.Grid
 
 import System.IO
 
@@ -128,7 +130,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Use this binding with avoidStruts from Hooks.ManageDocks.
     -- See also the statusBar function from Hooks.DynamicLog.
     --
-    -- , ((modm              , xK_b     ), sendMessage ToggleStruts)
+    , ((modm              , xK_b     ), sendMessage ToggleStruts)
 
     -- Quit xmonad
     , ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
@@ -203,8 +205,8 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- The available layouts.  Note that each layout is separated by |||,
 -- which denotes layout choice.
 --
-{-
-myLayout = tiled ||| Mirror tiled ||| Full
+
+myLayout = avoidStruts $ tiled ||| Mirror tiled ||| smartBorders Full ||| Grid
   where
      -- default tiling algorithm partitions the screen into two panes
      tiled   = Tall nmaster delta ratio
@@ -217,8 +219,8 @@ myLayout = tiled ||| Mirror tiled ||| Full
 
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
--}
-myLayout = avoidStruts $ layoutHook defaultConfig
+
+     {-myLayout = avoidStruts $ layoutHook defaultConfig ||| smartBorder Full-}
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -280,13 +282,16 @@ myStartupHook = return ()
 -- Run xmonad with the settings you specify. No need to modify this.
 --
 main = do 
-    xmproc <- spawnPipe xmobarPanel
-    trayerproc <- spawnPipe trayerPanel 
-    networkmanagerproc <- spawnPipe networkManager
-    powermanagerproc <- spawnPipe powerManager
+    xsetrootProc  <- spawn xsetrootCmd
+    setxkbmapProc <- spawn setxkbmapCmd
+    xcompmgrProc  <- spawn xcompmgrCmd
+    xmobarProc        <- spawnPipe xmobarPanel
+    trayerproc    <- spawnPipe trayerPanel 
+    networkmanagerProc <- spawn networkManager
+    powermanagerproc <- spawn powerManager
     xmonad $ defaults {
         logHook = dynamicLogWithPP $ xmobarPP { 
-            ppOutput = hPutStrLn xmproc
+            ppOutput = hPutStrLn xmobarProc
             , ppTitle = xmobarColor "green" "" . shorten 50
         }
     }
@@ -373,6 +378,9 @@ help = unlines ["The default modifier key is 'alt'. Default keybindings:",
 
     
 -- Additions
+xsetrootCmd = "xsetroot -cursor_name left_ptr"
+setxkbmapCmd = "setxkbmap -layout es"
+xcompmgrCmd = "xcompmgr -c"
 
 xmobarPanel = "killall -9 xmobar; xmobar ~/.xmonad/xmobar.hs"
 trayerPanel = "killall -9 trayer; trayer --edge top --align right --SetDockType true" 
